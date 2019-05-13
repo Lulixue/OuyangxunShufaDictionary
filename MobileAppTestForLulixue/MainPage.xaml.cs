@@ -14,6 +14,10 @@ using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
+using System.Linq;
+using Windows.Security.Credentials;
+using Windows.UI.Core;
+using System.Threading;
 
 #if OFFLINE_SYNC_ENABLED
 using Microsoft.WindowsAzure.MobileServices.SQLiteStore;  // offline sync
@@ -39,17 +43,51 @@ namespace MobileAppTestForLulixue
         {
             string message;
             bool success = false;
+            // This sample uses the Facebook provider.
+            // Use the PasswordVault to securely store and access credentials.
+            PasswordVault vault = new PasswordVault();
+            PasswordCredential credential = null;
             try
             {
-                // Change 'MobileService' to the name of your MobileServiceClient instance.
-                // Sign-in using Facebook authentication.
-                user = await App.MobileService.LoginAsync(provider, "MobileAppTestForLulixue");
-                message = string.Format("You are now signed in - {0}", user.UserId);
-                success = true;
+                // Try to get an existing credential from the vault.
+                credential = vault.FindAllByResource(provider.ToString()).FirstOrDefault();
             }
-            catch (InvalidOperationException)
+            catch (Exception)
             {
-                message = "You must log in. Login Required";
+                // When there is no matching resource an error occurs, which we ignore.
+            }
+            if (false)//credential != null)
+            {
+                // Create a user from the stored credentials.
+                user = new MobileServiceUser(credential.UserName);
+                credential.RetrievePassword();
+                user.MobileServiceAuthenticationToken = credential.Password;
+                // Set the user from the stored credentials.
+                App.MobileService.CurrentUser = user;
+                // Consider adding a check to determine if the token is
+                // expired, as shown in this post: https://aka.ms/jww5vp.
+                success = true;
+                message = string.Format("Cached credentials for user - {0}", user.UserId);
+            }
+            else
+            {
+                try
+                {
+                    // Sign in with the identity provider.
+                    user = await App.MobileService
+                    .LoginAsync(provider, "MobileAppTestForLulixue");
+                    
+                    // Create and store the user credentials.
+                    credential = new PasswordCredential(provider.ToString(),
+                    user.UserId, user.MobileServiceAuthenticationToken);
+                    vault.Add(credential);
+                    success = true;
+                    message = string.Format("You are now signed in - {0}", user.UserId);
+                }
+                catch (MobileServiceInvalidOperationException)
+                {
+                    message = "You must sign in. Sign-In Required";
+                }
             }
             var dialog = new MessageDialog(message);
             dialog.Commands.Add(new UICommand("OK"));
@@ -64,16 +102,11 @@ namespace MobileAppTestForLulixue
 
         protected override /*async*/ void OnNavigatedTo(NavigationEventArgs e)
         {
-            if (user != null)
-            {
-                ButtonLogin.Visibility = Visibility.Collapsed;
-                ButtonSave.Visibility = Visibility.Visible;
-            }
             if (e.Parameter is Uri)
             {
                 App.MobileService.ResumeWithURL(e.Parameter as Uri);
-                return;
             }
+            UpdateButtons(user != null);
 #if OFFLINE_SYNC_ENABLED
             await InitLocalStoreAsync(); // offline sync
 #endif
@@ -185,18 +218,24 @@ namespace MobileAppTestForLulixue
         }
 #endif
         #endregion
-
-        private async void ButtonLogin_Click(object sender, RoutedEventArgs e)
+        
+        public void UpdateButtons(bool bSaveVisible)
         {
-            if (await AuthenticateAsync(MobileServiceAuthenticationProvider.MicrosoftAccount)// ||
-                /*await AuthenticateAsync(MobileServiceAuthenticationProvider.Google)*/
-                )
+            ButtonLogin.Visibility = bSaveVisible ? Visibility.Collapsed : Visibility.Visible;
+            ButtonSave.Visibility = bSaveVisible ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        public async void ButtonLogin_Click(object sender, RoutedEventArgs e)
+        {
+            bool bRet = await AuthenticateAsync(MobileServiceAuthenticationProvider.MicrosoftAccount);
+            if (bRet)
             {
-                ButtonLogin.Visibility = Visibility.Collapsed;
-                ButtonSave.Visibility = Visibility.Visible;
-                //await InitLocalStoreAsync(); //offline sync support.
+#if OFFLINE_SYNC_ENABLED
+                await InitLocalStoreAsync(); //offline sync support.
+#endif
                 await RefreshTodoItems();
             }
+            UpdateButtons(user != null);
         }
     }
 }

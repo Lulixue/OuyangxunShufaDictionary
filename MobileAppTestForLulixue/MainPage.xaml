@@ -91,13 +91,13 @@
 
                     <StackPanel x:Name="addItemPanel" Orientation="Horizontal">
                         <TextBox Grid.Row="1" MinWidth="300" Margin="5,5,5,5" Name="TextInput" KeyDown="TextInput_KeyDown" Height="44"></TextBox>
-                        <Button Name="ButtonSave" Visibility="Collapsed" Grid.Row="1" Grid.Column="1" VerticalAlignment="Top" Margin="0,8,8,8" Click="ButtonSave_Click">
+                        <Button Name="ButtonSave" Visibility="Visible" Grid.Row="1" Grid.Column="1" VerticalAlignment="Top" Margin="0,8,8,8" Click="ButtonSave_Click">
                             <StackPanel Orientation="Horizontal">
                                 <SymbolIcon Symbol="Add"/>
                                 <TextBlock Margin="5">Save</TextBlock>
                             </StackPanel>
                         </Button>
-                        <Button Name="ButtonLogin"  Margin="0,8,8,0" Click="ButtonLogin_Click" VerticalAlignment="Top" >
+                        <Button Name="ButtonLogin" Visibility="Collapsed"  Margin="0,8,8,0" Click="ButtonLogin_Click" VerticalAlignment="Top" >
                             <StackPanel Orientation="Horizontal">
                                 <SymbolIcon Symbol="Permissions"/>
                                 <TextBlock Margin="5">Sign in</TextBlock>
