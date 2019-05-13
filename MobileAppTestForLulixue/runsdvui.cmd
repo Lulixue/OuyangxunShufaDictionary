@@ -1,0 +1,2 @@
+cd /d "C:\Users\v-ligxia\source\repos\MobileAppTestForLulixue\MobileAppTestForLulixue" &msbuild "MobileAppTestForLulixue.csproj" /t:sdvViewer /p:configuration="Debug" /p:platform="x64" /p:SolutionDir="C:\Users\v-ligxia\source\repos\MobileAppTestForLulixue" 
+exit %errorlevel% 

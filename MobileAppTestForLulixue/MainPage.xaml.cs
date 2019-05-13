@@ -35,7 +35,7 @@ namespace MobileAppTestForLulixue
         private MobileServiceUser user;
         // Define a method that performs the authentication process
         // using a Facebook sign-in.
-        private async System.Threading.Tasks.Task<bool> AuthenticateAsync()
+        private async System.Threading.Tasks.Task<bool> AuthenticateAsync(MobileServiceAuthenticationProvider provider)
         {
             string message;
             bool success = false;
@@ -43,10 +43,8 @@ namespace MobileAppTestForLulixue
             {
                 // Change 'MobileService' to the name of your MobileServiceClient instance.
                 // Sign-in using Facebook authentication.
-                user = await App.MobileService
-                .LoginAsync(MobileServiceAuthenticationProvider.MicrosoftAccount, "MobileAppTestForLulixue");
-                message =
-                string.Format("You are now signed in - {0}", user.UserId);
+                user = await App.MobileService.LoginAsync(provider, "MobileAppTestForLulixue");
+                message = string.Format("You are now signed in - {0}", user.UserId);
                 success = true;
             }
             catch (InvalidOperationException)
@@ -64,8 +62,18 @@ namespace MobileAppTestForLulixue
             this.InitializeComponent();
         }
 
-        protected override async void OnNavigatedTo(NavigationEventArgs e)
+        protected override /*async*/ void OnNavigatedTo(NavigationEventArgs e)
         {
+            if (user != null)
+            {
+                ButtonLogin.Visibility = Visibility.Collapsed;
+                ButtonSave.Visibility = Visibility.Visible;
+            }
+            if (e.Parameter is Uri)
+            {
+                App.MobileService.ResumeWithURL(e.Parameter as Uri);
+                return;
+            }
 #if OFFLINE_SYNC_ENABLED
             await InitLocalStoreAsync(); // offline sync
 #endif
@@ -178,11 +186,16 @@ namespace MobileAppTestForLulixue
 #endif
         #endregion
 
-        private async void BtnLogIn_Click(object sender, RoutedEventArgs e)
+        private async void ButtonLogin_Click(object sender, RoutedEventArgs e)
         {
-            if (await AuthenticateAsync())
+            if (await AuthenticateAsync(MobileServiceAuthenticationProvider.MicrosoftAccount)// ||
+                /*await AuthenticateAsync(MobileServiceAuthenticationProvider.Google)*/
+                )
             {
-                ButtonRefresh_Click(this, null);
+                ButtonLogin.Visibility = Visibility.Collapsed;
+                ButtonSave.Visibility = Visibility.Visible;
+                //await InitLocalStoreAsync(); //offline sync support.
+                await RefreshTodoItems();
             }
         }
     }
